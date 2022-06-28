@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\Product;
 use App\Repository\ProductRepository;
 use JMS\Serializer\SerializationContext;
-use JMS\Serializer\Serializer;
 use JMS\Serializer\SerializerInterface;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -53,10 +52,13 @@ class ApiProductController extends AbstractController
      */
     #[Route("/api/products",name:"allProducts", methods: ["GET"])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un utilisateur')]
-    public function allProducts(ProductRepository $productRepository, SerializerInterface $serializer)
+    public function allProducts(Request $request,ProductRepository $productRepository, SerializerInterface $serializer)
     {
 
-        $products = $productRepository->findAll();
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+
+        $products = $productRepository->findAllWithPagination($page,$limit);
 
         $data = $serializer->serialize($products, 'json', SerializationContext::create()->setGroups(['list']));
         //$data = $serializer->serialize($products, 'json');
@@ -87,13 +89,12 @@ class ApiProductController extends AbstractController
     public function product(int $id, ProductRepository $productRepository, SerializerInterface $serializer)
     {
         $product = $productRepository->find($id);
-        if (isset($product)){
-            $data = $serializer->serialize($product, 'json');
-            $response = new Response($data);
-            $response->headers->set('Content-Type', 'application/json');
-            return $response;
-        }else{
+        if (!$product instanceof Product) {
             return new JsonResponse(null, Response::HTTP_NOT_FOUND);
         }
+        $data = $serializer->serialize($product, 'json');
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
+        return $response;
     }
 }

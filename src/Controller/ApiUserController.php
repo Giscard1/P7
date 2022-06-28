@@ -8,10 +8,10 @@ use App\Repository\ProductRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use JMS\Serializer\SerializerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -41,7 +41,6 @@ class ApiUserController extends AbstractController
      * @return JsonResponse
      */
     #[Route("/api/clients/{id}/users/{userId}", name:"OneProduct", methods: ["GET"])]
-    ####[Route("/api/user/{id}", name:"OneProduct", methods: ["GET"])]
     public function user(int $id,int $userId,SerializerInterface $serializer, UserRepository $userRepository)
     {
         $connectedUser = $this->getUser()->getId();
@@ -52,7 +51,7 @@ class ApiUserController extends AbstractController
             $user = $userRepository->find($userId);
             //Vérifiaction de l'existance de l'utilisateur recherché
             if ($user){
-                //Utilisateur derrière {userId} que son customer a bien l'id égal à {id}
+                //Vérifiaction de l'existance de l'utilisateur recherché
                 if ($user->getCustomer()->getId() == $id ){
                     $data = $serializer->serialize($user, 'json', SerializationContext::create()->setGroups(['detailUser']));
                     $response = new Response($data);
@@ -96,6 +95,8 @@ class ApiUserController extends AbstractController
 
        //A vérifier en premier sur le controller -> que l'id de la personne connectée correspondant bien au {id}
        if($id == $connectedUser ){
+            var_dump($id);
+            var_dump($connectedUser);
            $data = $request->getContent();
            $user = $serializer->deserialize($data, User::class, 'json');
            $errors = $validator->validate($user);
@@ -133,39 +134,33 @@ class ApiUserController extends AbstractController
      *     )
      * )
      * @OA\Tag(name="Users")
-     * @param Request $request
-     * @param int $id
-     * @param int $idUser
      * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $em
-     * @param \Doctrine\Persistence\ManagerRegistry $doctrine
-     * @param UserRepository $userRepository
      * @return JsonResponse
      */
     #[Route('/api/clients/{id}/users/{idUser}', name: 'app_api_delete_user', methods: ["DELETE"])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour supprimer un utilisateur')]
-    public function deleteUser(Request $request,int $id,int $idUser, SerializerInterface $serializer, EntityManagerInterface $em, \Doctrine\Persistence\ManagerRegistry $doctrine, UserRepository $userRepository){
+    public function deleteUser(Request $request,int $id,int $idUser, SerializerInterface $serializer, EntityManagerInterface $em, UserRepository $userRepository){
 
-        $data = $request->getContent();
         $connectedUser = $this->getUser()->getId();
-        //    #[Route('/api/delete/user', name: 'app_api_delete_user', methods: ["DELETE"])]
-        if($id == $connectedUser ) {
-            $idUser = $serializer->deserialize($data, User::class, 'json');
-            //Vérification de l'existance de l'utiliateur
-            if ($connectedUser == $idUser->getCustomer()->getId()){
-                    if ($userRepository->find($idUser)) ;
-                {
-                    $user = $userRepository->find($idUser);
-                    $em = $doctrine->getManager();
-                    $em->remove($user);
-                    $em->flush();
-
-                    return new Response('Succès suppression utilisateur', Response::HTTP_ACCEPTED);
-                }
-            }
-            return new Response('L\'utilisateur n\'existe pas',Response::HTTP_NOT_FOUND);
+        if ($id !== $connectedUser) {
+            return new JsonResponse(
+                ['message' => ' Vous avez pas la permission'],
+                Response::HTTP_FORBIDDEN
+            );
         }
-        return new Response('Vous avez pas la permission',Response::HTTP_FORBIDDEN);
+        $user = $userRepository->find($idUser);
+        if (!$user instanceof User){
+            return new JsonResponse(null, Response::HTTP_NOT_FOUND);
+        }
+        if ($connectedUser !== $user->getCustomer()->getId()) {
+            return new JsonResponse(
+                ['message' => ' Vous avez pas la permission'],
+                Response::HTTP_FORBIDDEN
+            );
+        }
+        $em->remove($user);
+        $em->flush();
+        return new JsonResponse(null,Response::HTTP_NO_CONTENT);
     }
 
     /**
@@ -187,26 +182,25 @@ class ApiUserController extends AbstractController
      * @return JsonResponse
      */
     #[Route("/api/clients/{id}/users",name:"allClientsOfACustomer", methods: ["GET"])]
-    public function allClients(int $id,CustomerRepository $customerRepository,UserRepository $userRepository, SerializerInterface $serializer)
+    public function allClients(int $id, Request $request, CustomerRepository $customerRepository,UserRepository $userRepository, SerializerInterface $serializer)
     {
-        $userId = $this->getUser()->getId();
-        $customer = $customerRepository->find($id);
+        $connectedUser = $this->getUser()->getId();
 
-       if ($id == $userId){
-           $users = $userRepository->findBy(['customer' => $customer->getId()]);
-           if (!is_null($users)){
-               $data = $serializer->serialize($users, 'json');
-               $response = new Response($data);
-               $response->headers->set('Content-Type', 'application/json');
+        if ($id !== $connectedUser) {
+            return new JsonResponse(
+                ['message' => ' Vous avez pas la permission'],
+                Response::HTTP_FORBIDDEN
+            );
+        }
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+        $customerId = $this->getUser()->getId();
+        $users = $userRepository->findAllWithPagination($page,$limit,$customerId);
+        $data = $serializer->serialize($users, 'json');
+        $response = new Response($data);
+        $response->headers->set('Content-Type', 'application/json');
 
-               return $response;
+        return $response;
 
-           }else{
-               return new Response('Le client n\'a pas d\'utilisateur',Response::HTTP_NO_CONTENT);
-           }
-
-       } else{
-           return new JsonResponse('pas les droits', Response::HTTP_FORBIDDEN);
-       }
     }
 }

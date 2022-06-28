@@ -39,15 +39,15 @@ class UserRepository extends ServiceEntityRepository
         }
     }
 
-    public function getAllSfrUsers()
-    {
-        return $this->createQueryBuilder('u')
-            ->where('u.customer = :sfr')
-            ->setParameter('sfr', 1)
-            ->getQuery()
-            ->getResult();
-    }
+    public function findAllWithPagination($page, $limit,$customerId) {
+        $qb = $this->createQueryBuilder('u')
+            ->where('u.customer = :customer')
+            ->setParameter('customer', $customerId)
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
 
+        return $qb->getQuery()->getResult();
+    }
 
 
 //    /**
