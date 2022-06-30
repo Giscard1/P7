@@ -7,15 +7,24 @@ use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 use Hateoas\Configuration\Annotation as Hateoas;
 use Symfony\Component\Validator\Constraints as Assert;
+use JMS\Serializer\Annotation\Groups;
 /**
  * @Hateoas\Relation(
- *      "self",
+ *      "Link to the product",
  *      href = @Hateoas\Route(
- *          "allProducts",
+ *          "oneProduct",
  *          parameters = { "id" = "expr(object.getId())" }
- *      )
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups="list")
  * )
  *
+ * @Hateoas\Relation(
+ *      "Link to the list of all the products",
+ *      href = @Hateoas\Route(
+ *          "allProducts"
+ *      ),
+ *     exclusion = @Hateoas\Exclusion(groups="detail")
+ * )
  */
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 class Product

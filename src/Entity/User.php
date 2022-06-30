@@ -6,18 +6,57 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 use Symfony\Component\Validator\Constraints as Assert;
+use Hateoas\Configuration\Annotation as Hateoas;
 
+
+/**
+ * @Hateoas\Relation(
+ *      "Retourne les information d’un utilisateur",
+ *      href = @Hateoas\Route(
+ *          "OneClient",
+ *          parameters = { "id" = "expr(object.getCustomer().getId())", "userId" = "expr(object.getId())" }
+ *      ),
+ *      exclusion = @Hateoas\Exclusion(groups="userDetail")
+ * )
+ *
+ * * @Hateoas\Relation(
+ *      "Créer un utilisateur",
+ *      href = @Hateoas\Route(
+ *          "app_api_create_user",
+ *     parameters = { "id" = "expr(object.getCustomer().getId())" }
+ *      ),
+ *     exclusion = @Hateoas\Exclusion(groups="Créer un utilisateur")
+ * )
+ *
+ * @Hateoas\Relation(
+ *      "Supprimer un utilisateur",
+ *      href = @Hateoas\Route(
+ *          "app_api_delete_user",
+ *          parameters = { "id" = "expr(object.getCustomer().getId())", "idUser" = "expr(object.getId())" }
+ *      ),
+ *     exclusion = @Hateoas\Exclusion(groups="Supprimer un utilisateur")
+ * )
+ *
+ * @Hateoas\Relation(
+ *      "Liste des clients",
+ *      href = @Hateoas\Route(
+ *          "allClientsOfACustomer",
+ *     parameters = { "id" = "expr(object.getId())" }
+ *      ),
+ *     exclusion = @Hateoas\Exclusion(groups="Liste des clients")
+ * )
+ */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 class User
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    #[Serializer\Groups(['detailUser'])]
+    #[Serializer\Groups(['userDetail'])]
     private $id;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Serializer\Groups(['detailUser'])]
+    #[Serializer\Groups(['userDetail','Liste des clients'])]
     /**
      * @Assert\Length(
      *      min=2, max=70,
@@ -29,7 +68,7 @@ class User
     private $first_name;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Serializer\Groups(['detailUser'])]
+    #[Serializer\Groups(['userDetail', 'Liste des clients'])]
     /**
      * @Assert\Length(
      *      min=2, max=70,
@@ -41,7 +80,7 @@ class User
     private $last_name;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Serializer\Groups(['detailUser'])]
+    #[Serializer\Groups(['userDetail', 'Liste des clients'])]
     /**
      * @Assert\NotBlank(message = "Le champ mail ne peut être vide.")
      * @Assert\Email(

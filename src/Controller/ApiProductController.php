@@ -60,7 +60,9 @@ class ApiProductController extends AbstractController
 
         $products = $productRepository->findAllWithPagination($page,$limit);
 
-        $data = $serializer->serialize($products, 'json', SerializationContext::create()->setGroups(['list']));
+        //$data = $serializer->serialize($products, 'json', SerializationContext::create()->setGroups(['list']));
+        $context = SerializationContext::create()->setGroups(['list']);
+        $data = $serializer->serialize($products, 'json',$context);
         //$data = $serializer->serialize($products, 'json');
         $response = new Response($data);
         $response->headers->set('Content-Type', 'application/json');
@@ -92,7 +94,8 @@ class ApiProductController extends AbstractController
         if (!$product instanceof Product) {
             return new JsonResponse(null, Response::HTTP_NOT_FOUND);
         }
-        $data = $serializer->serialize($product, 'json');
+        $context = SerializationContext::create()->setGroups(['detail']);
+        $data = $serializer->serialize($product, 'json',$context);
         $response = new Response($data);
         $response->headers->set('Content-Type', 'application/json');
         return $response;

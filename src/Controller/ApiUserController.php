@@ -20,6 +20,7 @@ use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 //use Symfony\Component\Security\Core\Security;
+use JMS\Serializer\Serializer;
 
 
 class ApiUserController extends AbstractController
@@ -40,20 +41,26 @@ class ApiUserController extends AbstractController
      * @param SerializerInterface $serializer
      * @return JsonResponse
      */
-    #[Route("/api/clients/{id}/users/{userId}", name:"OneProduct", methods: ["GET"])]
+    #[Route("/api/clients/{id}/users/{userId}", name:"OneClient", methods: ["GET"])]
     public function user(int $id,int $userId,SerializerInterface $serializer, UserRepository $userRepository)
     {
         $connectedUser = $this->getUser()->getId();
 
+        if ($id !== $connectedUser) {
+            return new JsonResponse(
+                ['message' => ' Vous avez pas la permission'],
+                Response::HTTP_FORBIDDEN
+            );
+        }
         //Vérification si  l'id de la personne connectée correspondant bien au {id}
         if($id == $connectedUser ) {
-
             $user = $userRepository->find($userId);
             //Vérifiaction de l'existance de l'utilisateur recherché
             if ($user){
                 //Vérifiaction de l'existance de l'utilisateur recherché
                 if ($user->getCustomer()->getId() == $id ){
-                    $data = $serializer->serialize($user, 'json', SerializationContext::create()->setGroups(['detailUser']));
+                    $context = SerializationContext::create()->setGroups(['userDetail']);
+                    $data = $serializer->serialize($user, 'json', $context);
                     $response = new Response($data);
                     $response->headers->set('Content-Type', 'application/json');
 
@@ -95,10 +102,9 @@ class ApiUserController extends AbstractController
 
        //A vérifier en premier sur le controller -> que l'id de la personne connectée correspondant bien au {id}
        if($id == $connectedUser ){
-            var_dump($id);
-            var_dump($connectedUser);
            $data = $request->getContent();
-           $user = $serializer->deserialize($data, User::class, 'json');
+           $context = SerializationContext::create()->setGroups(['Créer un utilisateur']);
+           $user = $serializer->deserialize($data, User::class, 'json', $context);
            $errors = $validator->validate($user);
 
            //Vérification des erreurs (entitys)
@@ -196,7 +202,8 @@ class ApiUserController extends AbstractController
         $limit = $request->get('limit', 3);
         $customerId = $this->getUser()->getId();
         $users = $userRepository->findAllWithPagination($page,$limit,$customerId);
-        $data = $serializer->serialize($users, 'json');
+        $context = SerializationContext::create()->setGroups(['Liste des clients']);
+        $data = $serializer->serialize($users, 'json',$context);
         $response = new Response($data);
         $response->headers->set('Content-Type', 'application/json');
 
