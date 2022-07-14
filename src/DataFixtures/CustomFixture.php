@@ -56,7 +56,6 @@ class CustomFixture extends Fixture
             $this->addReference(self::Custom_REF_ORANGE, $orange);
             $this->addReference(self::Custom_REF_BOUYGUES, $bouygues);
 
-
         $manager->flush();
     }
 }
